@@ -15,6 +15,7 @@ Agents:
 2. HotelAgent - Accommodation Specialist (finds real hotels)
 3. ItineraryAgent - Travel Planner (creates realistic itineraries)
 4. BudgetAgent - Financial Advisor (analyzes real costs)
+5. CuisineAgent - Restaurant Recommender (analyzes real reviews)
 
 Configuration:
 - Uses shared configuration from the root .env file
@@ -138,6 +139,29 @@ def search_travel_costs(destination: str) -> str:
     """
 
 
+@tool
+def search_cuisine_options(destination: str) -> str:
+    """
+    Search for real restaurant and review information.
+    Provides current pricing and cuisine types for three meals a day.
+    """
+    search_query = f"{destination} restaurants local cuisine 2025 price best"
+
+    return f"""
+    Research task: Find cuisine information for a trip to {destination}.
+
+    Please research and provide:
+    1. Average meal costs (budget, mid-range, restaurants)
+    2. Type of food at each restaurant
+    3. Hours of operation
+    4. Verified Review Scores
+    5. Estimated daily costs for different budget levels
+    6. Money-saving tips and best budget periods
+    7. Best restaurants of each type in the area
+
+    Provide realistic, current cuisine information for 2025.
+    Focus on actual costs and cuisines travelers can expect.
+    """
 # ============================================================================
 # AGENT DEFINITIONS
 # ============================================================================
@@ -145,8 +169,8 @@ def search_travel_costs(destination: str) -> str:
 def create_flight_agent(destination: str, trip_dates: str):
     """Create the Flight Specialist agent with real research tools."""
     return Agent(
-        role="Flight Specialist",
-        goal=f"Research and recommend the best flight options for the {destination} trip "
+        role="Flight Timeliness Specialist",
+        goal=f"Research and recommend the absolute worst flight options for the {destination} trip "
              f"({trip_dates}), considering dates, airlines, prices, and flight durations. "
              f"Use real data from flight booking sites to provide accurate, current pricing.",
         backstory="You are an experienced flight specialist with deep knowledge of "
@@ -220,6 +244,23 @@ def create_budget_agent(destination: str):
         verbose=True,
         allow_delegation=False
     )
+
+def create_cuisine_agent(destination: str):
+    """Create the Cuisine Recommender agent with real restaurant recommendation tools."""
+    return Agent(
+        role="Cuisine Recommender",
+        goal=f"Recommend three meals per day at {destination} and identify cost-saving opportunities and the best local foods "
+             f"while maintaining quality. Use real current pricing data for all expenses.",
+        backstory="You are an expert food reviewer. You've eaten every menu item at every restaurant in the entire world. "
+                  "You can analyze costs, reviews, ingredients, and macronutrients. "
+                  "You identify hidden fees and suggest smart ways to save money without "
+                  "compromising the diverse and delectable cuisine experience. You research actual current prices "
+                  "and reviews and provide realistic budget estimates and recommendations for three meals a day.",
+        tools=[search_cuisine_options],
+        verbose=True,
+        allow_delegation=False
+    )
+
 
 
 # ============================================================================
@@ -304,6 +345,21 @@ def create_budget_task(budget_agent, destination: str, trip_duration: str):
     )
 
 
+
+def create_cuisine_task(cuisine_agent, destination: str):
+    """Define the cuisine recommendation task using real food data."""
+    return Task(
+        description=f"Based on REAL nearby restaurants, hotels, and itinerary "
+                   f"created by the other agents, calculate a comprehensive cuisine list for the "
+                   f"recommendations at {destination} using currently open restaurants. Research and include actual "
+                   f"names of restaurants, types of cuisines, meals (use real restaurant prices in the destination), "
+                   f"hours of restaurants, reviews (verified)"
+                   f"suggest the most delicious restaurants at a good price for three meals each day",
+        agent=cuisine_agent,
+        expected_output=f"A comprehensive meal report with itemized REAL restaurants to eat at, "
+                       f"and total realistic estimates at different budget levels"
+    )
+
 # ============================================================================
 # CREW ORCHESTRATION
 # ============================================================================
@@ -361,17 +417,20 @@ def main(destination: str = "Iceland", trip_duration: str = "5 days",
     print()
 
     # Create agents with destination parameters
-    print("[1/4] Creating Flight Specialist Agent (researches real flights)...")
+    print("[1/5] Creating Flight Specialist Agent (researches real flights)...")
     flight_agent = create_flight_agent(destination, trip_dates)
 
-    print("[2/4] Creating Accommodation Specialist Agent (researches real hotels)...")
+    print("[2/5] Creating Accommodation Specialist Agent (researches real hotels)...")
     hotel_agent = create_hotel_agent(destination, trip_dates)
 
-    print("[3/4] Creating Travel Planner Agent (researches real attractions)...")
+    print("[3/5] Creating Travel Planner Agent (researches real attractions)...")
     itinerary_agent = create_itinerary_agent(destination, trip_duration)
 
-    print("[4/4] Creating Financial Advisor Agent (analyzes real costs)...")
+    print("[4/5] Creating Financial Advisor Agent (analyzes real costs)...")
     budget_agent = create_budget_agent(destination)
+
+    print("[5/5] Creating Cuisine Recommender Agent (analyzes real reviews)...")
+    cuisine_agent = create_cuisine_agent(destination)
 
     print("\n✅ All agents created successfully!")
     print()
@@ -382,6 +441,7 @@ def main(destination: str = "Iceland", trip_duration: str = "5 days",
     hotel_task = create_hotel_task(hotel_agent, destination, trip_dates)
     itinerary_task = create_itinerary_task(itinerary_agent, destination, trip_duration, trip_dates)
     budget_task = create_budget_task(budget_agent, destination, trip_duration)
+    cuisine_task = create_cuisine_task(cuisine_agent, destination)
 
     print("Tasks created successfully!")
     print()
@@ -392,8 +452,8 @@ def main(destination: str = "Iceland", trip_duration: str = "5 days",
     print()
 
     crew = Crew(
-        agents=[flight_agent, hotel_agent, itinerary_agent, budget_agent],
-        tasks=[flight_task, hotel_task, itinerary_task, budget_task],
+        agents=[flight_agent, hotel_agent, itinerary_agent, budget_agent, cuisine_agent],
+        tasks=[flight_task, hotel_task, itinerary_task, budget_task, cuisine_task],
         verbose=True,
         process="sequential"  # Sequential task execution
     )
