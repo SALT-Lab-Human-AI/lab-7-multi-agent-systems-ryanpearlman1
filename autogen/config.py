@@ -101,8 +101,8 @@ class AgentConfig:
 
     RESEARCH_AGENT = {
         "name": "ResearchAgent",
-        "role": "Market Researcher",
-        "temperature": 0.7,
+        "role": "Food Researcher",
+        "temperature": 0.2,
     }
 
     ANALYSIS_AGENT = {
